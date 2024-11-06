@@ -1,0 +1,5 @@
+{
+  "directions": ["From 1", "From 5"],
+  "moveTypes": ["ArmorLock", "The Wrap"],
+  "rotation": ["Inner", "Outer"]
+}

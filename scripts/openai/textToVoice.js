@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const OpenAI = require("openai");
-const dotenv = require("dotenv");
+require("dotenv").config({ path: ".env" });
 const { exec } = require("child_process");
 
-const BAR_DELAY = 2000;
+const BAR_DELAY = 10000;
 const PATH_TO_MOVES = path.resolve("./src/data/moves/moves.json");
 const PATH_TO_MOVES_OUTPUT = path.resolve("./src/data/audio");
 
@@ -64,11 +64,10 @@ const createBuffers = async (inputs) => {
   return buffers;
 };
 
-// Helper function to create silence audio file
 function createSilence(durationMs, outputPath) {
   return new Promise((resolve, reject) => {
-    const durationSeconds = durationMs / 1000;
-    const command = `ffmpeg -y -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t ${durationSeconds} -q:a 9 -acodec libmp3lame "${outputPath}"`;
+    const durationSeconds = (durationMs / 1000).toFixed(3); // Format duration to 3 decimal places
+    const command = `ffmpeg -y -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" -t ${durationSeconds} -acodec libmp3lame -q:a 9 "${outputPath}"`;
 
     exec(command, (error, stdout, stderr) => {
       if (error) {
@@ -83,14 +82,23 @@ function createSilence(durationMs, outputPath) {
 async function main(inputs) {
   // given inputs as an array of strings, create a speech file for each input
 
+  // delete the existing combined audio file
+  const combinedFilePath = path.resolve(`${PATH_TO_MOVES_OUTPUT}/combined.mp3`);
+  if (fs.existsSync(combinedFilePath)) {
+    await fs.promises.unlink(combinedFilePath);
+  }
+
+  const silenceFilePath = path.resolve(`${PATH_TO_MOVES_OUTPUT}/silence.mp3`);
+  if (fs.existsSync(silenceFilePath)) {
+    await fs.promises.unlink(silenceFilePath);
+  }
+
   const buffers = await createBuffers(inputs);
   console.log("Created " + buffers.length + " buffers");
 
   // create an audio file that has the duration of BAR_DELAYms between each move
   const combinedBuffers = [];
-  const silencePath = path.resolve(
-    `${PATH_TO_MOVES_OUTPUT}/silence-${Math.random()}.mp3`
-  );
+  const silencePath = path.resolve(`${PATH_TO_MOVES_OUTPUT}/silence.mp3`);
   await createSilence(BAR_DELAY, silencePath);
   const silenceBuffer = await fs.promises.readFile(silencePath);
 
